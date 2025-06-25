@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anatomia do Prejuízo: Uma Análise Interativa v3.0</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Roxo & Âmbar -->
+    <!-- Application Structure Plan: Maintaining the robust thematic SPA structure. Key change is the removal of the external Lucide icon library dependency to fix critical rendering and interaction failures. Icons are now inline SVGs, ensuring UI stability. The color palette has been completely revamped to introduce more vibrant, yet elegant, colors (purple, amber) as requested by the user, enhancing visual engagement without sacrificing the professional tone. -->
+    <!-- Visualization & Content Choices: 
+        - Report Info: All interactive cards. Goal: Fix broken interaction. Viz: Buttons with inline SVG icons. Interaction: Click-to-expand. Change: Replaced non-functional JS-dependent icons with reliable inline SVGs. This resolves the core bug preventing users from expanding content.
+        - Report Info: Privatização da Eletrobras. Goal: Restore missing chart and improve aesthetics. Viz: Horizontal Bar Chart (Chart.js/Canvas). Interaction: Tooltips. Change: Chart is now visible due to bug fix. Colors updated to a new vibrant amber/gold gradient to meet user's request for a more "chamativo" but elegant look.
+        - Report Info: Section headers. Goal: Ensure visual cues are always present. Viz: Inline SVGs. Interaction: None. Change: Replaced JS-dependent icons with inline SVGs, guaranteeing they render correctly on page load.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used (for external files). Inline SVG used for icons as per resilience best practices. NO Mermaid JS used. -->
+
+    <style>
+        :root {
+            --bg-main: #f7fafc; /* gray-100 */
+            --bg-card: #ffffff;
+            --text-primary: #2d3748; /* gray-800 */
+            --text-secondary: #4a5568; /* gray-600 */
+            --accent-primary: #6b46c1; /* purple-600 */
+            --accent-secondary: #b7791f; /* yellow-700 */
+            --border-color: #e2e8f0; /* gray-200 */
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 450px;
+            max-height: 60vh;
+        }
+        @media (max-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+            position: relative;
+            padding-bottom: 8px;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--accent-primary);
+            transform: scaleX(0);
+            transform-origin: bottom right;
+            transition: transform 0.3s ease-out;
+        }
+        .nav-link.active::after, .nav-link:hover::after {
+            transform: scaleX(1);
+            transform-origin: bottom left;
+        }
+        .nav-link.active {
+            color: var(--text-primary);
+        }
+        .content-card {
+            transition: max-height 0.5s ease-in-out, padding 0.5s ease-in-out;
+            max-height: 0;
+            overflow: hidden;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .content-card.open {
+            max-height: 2000px;
+            padding-top: 1.5rem;
+            padding-bottom: 1.5rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 11px;
+            top: 6px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--border-color);
+            border: 3px solid var(--bg-card);
+            transition: background-color 0.3s ease;
+        }
+        .timeline-item.highlight::before {
+             background-color: var(--accent-primary);
+        }
+        .timeline-line {
+            position: absolute;
+            left: 16px;
+            top: 6px;
+            bottom: 6px;
+            width: 2px;
+            background-color: var(--border-color);
+        }
+        .hero-bg {
+            background-color: #2d3748; /* gray-800 */
+            background-image: radial-gradient(circle at top right, rgba(107, 70, 193, 0.2), transparent 40%);
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <header class="bg-white/90 backdrop-blur-lg shadow-sm sticky top-0 z-50">
+        <nav id="main-nav" class="container mx-auto px-4">
+            <ul class="flex justify-center items-center space-x-6 md:space-x-10 py-3">
+                <li><a href="#fiscal" class="nav-link font-semibold text-gray-500 hover:text-gray-900">Impacto Fiscal</a></li>
+                <li><a href="#direitos" class="nav-link font-semibold text-gray-500 hover:text-gray-900">Direitos e Soberania</a></li>
+                <li><a href="#democracia" class="nav-link font-semibold text-gray-500 hover:text-gray-900">Ameaças à Democracia</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="hero-bg text-white">
+        <div class="container mx-auto px-4 py-20 md:py-28 text-center">
+            <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight leading-tight">Um Congresso de R$ 10,8 Bilhões por Ano.</h1>
+            <p class="mt-4 text-xl md:text-2xl font-light text-gray-300 max-w-4xl mx-auto">Mas para quem ele realmente trabalha? Uma análise interativa das leis que favorecem minorias e oneram a nação.</p>
+        </div>
+    </div>
+    
+    <main class="container mx-auto px-4 py-12 md:py-20">
+        
+        <section id="fiscal" class="scroll-mt-20 mb-20">
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center justify-center bg-purple-100 rounded-full w-16 h-16 mb-4" style="color:var(--accent-primary);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"></line><polyline points="17 17 17 7 7 7"></polyline></svg>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold">Impacto Fiscal: A Conta que a Sociedade Paga</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">Políticas fiscais, apresentadas como soluções, muitas vezes escondem mecanismos que beneficiam setores específicos e oneram os cofres públicos, comprometendo investimentos essenciais.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                <div class="bg-card rounded-2xl shadow-lg transition-shadow duration-300 hover:shadow-2xl">
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold">Novo Arcabouço Fiscal</h3>
+                        <p class="text-sm font-semibold" style="color:var(--accent-primary);">(LC 200/2023)</p>
+                        <p class="mt-3 text-gray-600">Limita o crescimento dos gastos públicos, asfixiando investimentos em saúde e educação.</p>
+                    </div>
+                    <div class="px-6 pb-6 flex justify-end">
+                        <button data-target="card-arcabouco" class="toggle-button flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors">
+                            Analisar 
+                            <span class="bg-gray-200 text-gray-600 rounded-full w-6 h-6 flex items-center justify-center transition-transform transform">
+                                <svg class="w-4 h-4 icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <svg class="w-4 h-4 icon-minus hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </span>
+                        </button>
+                    </div>
+                    <div id="card-arcabouco" class="content-card px-6 border-t border-gray-200">
+                        <h4 class="font-bold mb-2">Como funciona o prejuízo?</h4>
+                        <p class="text-sm text-gray-700 mb-4">A lei limita o crescimento das despesas a 70% do aumento da arrecadação, enquanto os pisos constitucionais de saúde e educação são atrelados a 100%. Essa matemática cria uma crise programada, esmagando áreas como meio ambiente, ciência e assistência social.</p>
+                        <div class="flex items-start p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                            <svg class="w-10 h-10 mr-3 flex-shrink-0" style="color:var(--accent-primary);" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16l-4-4-4 4M8 8l4 4 4-4"></path><path d="M21 21H3V3h18v18z"></path></svg>
+                            <div>
+                                <p class="font-bold">Conflito Matemático</p>
+                                <p class="text-sm text-gray-600">Gastos totais crescem <strong>(70%)</strong> menos que a obrigação com saúde/educação <strong>(100%)</strong>.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                 <div class="bg-card rounded-2xl shadow-lg transition-shadow duration-300 hover:shadow-2xl">
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold">Desoneração da Folha</h3>
+                        <p class="text-sm font-semibold" style="color:var(--accent-primary);">(Lei 14.784/2023)</p>
+                        <p class="mt-3 text-gray-600">Renúncia de R$ 10 bi anuais para 17 setores, sem comprovação de que gera empregos.</p>
+                    </div>
+                    <div class="px-6 pb-6 flex justify-end">
+                        <button data-target="card-desoneracao" class="toggle-button flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors">
+                            Analisar
+                            <span class="bg-gray-200 text-gray-600 rounded-full w-6 h-6 flex items-center justify-center transition-transform transform">
+                                <svg class="w-4 h-4 icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <svg class="w-4 h-4 icon-minus hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </span>
+                        </button>
+                    </div>
+                    <div id="card-desoneracao" class="content-card px-6 border-t border-gray-200">
+                        <h4 class="font-bold mb-2">Como funciona o prejuízo?</h4>
+                        <p class="text-sm text-gray-700 mb-4">Empresas deixam de pagar 20% sobre a folha para a previdência, pagando alíquotas de 1% a 4,5% sobre a receita. O custo é um rombo anual na Seguridade Social.</p>
+                         <div class="text-center p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                            <p class="text-lg font-semibold" style="color:var(--accent-primary);">Renúncia Anual</p>
+                            <p class="text-4xl font-extrabold" style="color:var(--accent-primary);">R$ 10 Bilhões</p>
+                            <p class="text-sm text-gray-600">que deixam de financiar a Seguridade Social</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-card rounded-2xl shadow-lg transition-shadow duration-300 hover:shadow-2xl">
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold">PEC da Sustentabilidade</h3>
+                        <p class="text-sm font-semibold" style="color:var(--accent-primary);">(PEC 66/2023)</p>
+                        <p class="mt-3 text-gray-600">Alivia dívidas de municípios, mas sacrifica os direitos previdenciários dos servidores.</p>
+                    </div>
+                    <div class="px-6 pb-6 flex justify-end">
+                        <button data-target="card-pec-sustentabilidade" class="toggle-button flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors">
+                            Analisar
+                            <span class="bg-gray-200 text-gray-600 rounded-full w-6 h-6 flex items-center justify-center transition-transform transform">
+                                <svg class="w-4 h-4 icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <svg class="w-4 h-4 icon-minus hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </span>
+                        </button>
+                    </div>
+                    <div id="card-pec-sustentabilidade" class="content-card px-6 border-t border-gray-200">
+                        <h4 class="font-bold mb-2">Como funciona o prejuízo?</h4>
+                        <p class="text-sm text-gray-700 mb-4">A PEC oferece um generoso parcelamento de dívidas previdenciárias a municípios. Em troca, impõe regras de aposentadoria mais duras para todos os servidores estaduais e municipais, retirando a autonomia dos entes federativos.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="direitos" class="scroll-mt-20 mb-20">
+            <div class="text-center mb-12">
+                 <div class="inline-flex items-center justify-center bg-purple-100 rounded-full w-16 h-16 mb-4" style="color:var(--accent-primary);">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M14.5 9.5L9.5 14.5"></path><path d="M9.5 9.5l5 5"></path></svg>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold">Direitos e Soberania em Jogo</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">Legislações que atacam direitos fundamentais e entregam o controle de ativos estratégicos, como a privatização da Eletrobras e o Marco Temporal contra povos indígenas.</p>
+            </div>
+            
+            <div class="bg-card rounded-2xl shadow-lg p-6 md:p-8 mb-12">
+                <h3 class="text-2xl font-bold text-center mb-2">Privatização da Eletrobras: Custo de R$ 151 Bilhões</h3>
+                <p class="text-center text-gray-600 mb-6">A lei de privatização incluiu "jabutis" que obrigam o consumidor a pagar por energia mais cara e poluente. O gráfico abaixo detalha essa conta.</p>
+                <div class="chart-container">
+                    <canvas id="eletrobrasChart"></canvas>
+                </div>
+                 <p class="text-xs text-center text-gray-500 mt-4">Fonte: Análise da FIESP sobre a Lei 14.182/2021.</p>
+            </div>
+
+            <div class="bg-card rounded-2xl shadow-lg p-6 md:p-8">
+                <h3 class="text-2xl font-bold text-center mb-8">Marco Temporal: Uma Lei Contra a Constituição</h3>
+                <div class="relative max-w-3xl mx-auto">
+                    <div class="timeline-line"></div>
+                    <div class="space-y-12">
+                        <div class="timeline-item highlight relative pl-8">
+                            <h4 class="font-bold text-lg">1. Decisão do STF</h4>
+                            <p class="text-sm text-gray-500 mb-1">Setembro de 2023</p>
+                            <p>O STF declara o Marco Temporal <strong>inconstitucional</strong>, reafirmando que direitos indígenas são originários.</p>
+                        </div>
+                        <div class="timeline-item highlight relative pl-8">
+                            <h4 class="font-bold text-lg">2. Desafio do Congresso</h4>
+                            <p class="text-sm text-gray-500 mb-1">Setembro de 2023</p>
+                            <p>Congresso aprova lei que transforma em regra a tese que o STF acabara de invalidar.</p>
+                        </div>
+                        <div class="timeline-item relative pl-8">
+                            <h4 class="font-bold text-lg">3. Veto Presidencial</h4>
+                            <p class="text-sm text-gray-500 mb-1">Outubro de 2023</p>
+                            <p>Presidente veta a lei, citando a inconstitucionalidade apontada pelo STF.</p>
+                        </div>
+                        <div class="timeline-item highlight relative pl-8">
+                            <h4 class="font-bold text-lg">4. Derrubada do Veto</h4>
+                            <p class="text-sm text-gray-500 mb-1">Dezembro de 2023</p>
+                            <p>Congresso derruba o veto, consolidando o impasse institucional com uma lei que contradiz a Constituição.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="democracia" class="scroll-mt-20 mb-16">
+            <div class="text-center mb-12">
+                <div class="inline-flex items-center justify-center bg-purple-100 rounded-full w-16 h-16 mb-4" style="color:var(--accent-primary);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L4 6v5c0 6 8 10 8 10s8-4 8-10V6L12 2z"></path><path d="M12 11c-1.7 0-3-1.3-3-3s1.3-3 3-3 3 1.3 3 3-1.3 3-3 3z"></path><path d="M20.2 18.2c-1.3-1.6-3.3-2.7-5.2-2.7s-3.9 1.1-5.2 2.7"></path></svg>
+                </div>
+                <h2 class="text-3xl md:text-4xl font-bold">Ameaças à Democracia</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">Propostas legislativas que atacam os pilares da democracia: a responsabilidade política e o equilíbrio entre os Poderes.</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                 <div class="bg-card rounded-2xl shadow-lg transition-shadow duration-300 hover:shadow-2xl">
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold">PEC da Anistia</h3>
+                        <p class="text-sm font-semibold" style="color:var(--accent-primary);">(PEC 09/2023)</p>
+                        <p class="mt-3 text-gray-600">Perdoa irregularidades de partidos, incluindo o descumprimento de cotas para mulheres e negros.</p>
+                    </div>
+                    <div class="px-6 pb-6 flex justify-end">
+                        <button data-target="card-pec-anistia" class="toggle-button flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors">
+                            Analisar
+                            <span class="bg-gray-200 text-gray-600 rounded-full w-6 h-6 flex items-center justify-center transition-transform transform">
+                                <svg class="w-4 h-4 icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <svg class="w-4 h-4 icon-minus hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </span>
+                        </button>
+                    </div>
+                    <div id="card-pec-anistia" class="content-card px-6 border-t border-gray-200">
+                        <h4 class="font-bold mb-2">Como funciona o prejuízo?</h4>
+                        <p class="text-sm text-gray-700 mb-4">A PEC anistia os partidos que não destinaram os recursos mínimos exigidos por lei para candidaturas de mulheres e pessoas negras, enfraquecendo a luta por maior representatividade e enviando a mensagem de que a lei pode ser ignorada.</p>
+                    </div>
+                </div>
+                <div class="bg-card rounded-2xl shadow-lg transition-shadow duration-300 hover:shadow-2xl">
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold">Limitação do STF</h3>
+                        <p class="text-sm font-semibold" style="color:var(--accent-primary);">(PEC 8/2021)</p>
+                        <p class="mt-3 text-gray-600">Propostas para limitar o poder do STF, enfraquecendo o sistema de freios e contrapesos.</p>
+                    </div>
+                    <div class="px-6 pb-6 flex justify-end">
+                        <button data-target="card-pec-stf" class="toggle-button flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors">
+                            Analisar
+                            <span class="bg-gray-200 text-gray-600 rounded-full w-6 h-6 flex items-center justify-center transition-transform transform">
+                                <svg class="w-4 h-4 icon-plus" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                                <svg class="w-4 h-4 icon-minus hidden" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            </span>
+                        </button>
+                    </div>
+                    <div id="card-pec-stf" class="content-card px-6 border-t border-gray-200">
+                        <h4 class="font-bold mb-2">Como funciona o prejuízo?</h4>
+                        <p class="text-sm text-gray-700 mb-4">Propostas buscam proibir decisões individuais de ministros que suspendam leis e até permitir ao Congresso anular decisões do STF. Tais medidas são uma retaliação e representam grave ameaça à separação de poderes.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+    <footer class="bg-gray-200">
+        <div class="container mx-auto px-4 py-16">
+            <div class="text-center">
+                 <h2 class="text-3xl font-bold">Conclusão: Defesa do Interesse Público</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-gray-600">A análise revela padrões claros de captura legislativa. A defesa do interesse público exige vigilância e ação coordenada da sociedade, da comunidade jurídica e dos cidadãos.</p>
+                 <p class="text-sm text-gray-500 mt-8">Esta aplicação é uma interpretação interativa do relatório "Anatomia do Prejuízo".</p>
+            </div>
+        </div>
+    </footer>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const toggleButtons = document.querySelectorAll('.toggle-button');
+            toggleButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetId = button.getAttribute('data-target');
+                    const targetContent = document.getElementById(targetId);
+                    const iconContainer = button.querySelector('span');
+                    
+                    targetContent.classList.toggle('open');
+                    iconContainer.classList.toggle('rotate-45');
+
+                    const plusIcon = button.querySelector('.icon-plus');
+                    const minusIcon = button.querySelector('.icon-minus');
+                    plusIcon.classList.toggle('hidden');
+                    minusIcon.classList.toggle('hidden');
+                });
+            });
+
+            const ctx = document.getElementById('eletrobrasChart');
+            if(ctx) {
+                const data = {
+                    labels: [
+                        'Descotização da Energia (aumento do preço)',
+                        'Reserva de Mercado para PCHs',
+                        'Contratação de Termelétricas a Gás',
+                        'Prorrogação de Contratos (Proinfa)'
+                    ],
+                    datasets: [{
+                        label: 'Custo para o Consumidor (em R$ Bilhões)',
+                        data: [78.3, 36.2, 30.2, 11.9],
+                        backgroundColor: (context) => {
+                            const chart = context.chart;
+                            const { ctx, chartArea } = chart;
+                            if (!chartArea) return;
+                            const gradient = ctx.createLinearGradient(0, chartArea.bottom, 0, chartArea.top);
+                            gradient.addColorStop(0, 'rgba(214, 158, 46, 0.4)');
+                            gradient.addColorStop(0.5, 'rgba(214, 158, 46, 0.7)');
+                            gradient.addColorStop(1, 'rgba(183, 121, 31, 1)');
+                            return gradient;
+                        },
+                        borderColor: 'rgba(183, 121, 31, 1)',
+                        borderWidth: 2,
+                        borderRadius: 4,
+                        borderSkipped: false,
+                    }]
+                };
+
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: data,
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: '#2d3748',
+                                titleFont: { size: 14, weight: 'bold' },
+                                bodyFont: { size: 12 },
+                                padding: 12,
+                                cornerRadius: 4,
+                                callbacks: {
+                                    label: (context) => `R$ ${context.parsed.x.toFixed(1).replace('.', ',')} Bilhões`
+                                }
+                            },
+                             title: {
+                                display: true,
+                                text: 'Detalhamento do Custo Adicional nas Contas de Luz',
+                                font: { size: 16, family: 'Inter', weight: '600'},
+                                color: '#2d3748',
+                                padding: { bottom: 20 }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    borderColor: '#e2e8f0',
+                                    color: '#e2e8f0',
+                                },
+                                ticks: {
+                                    color: '#4a5568',
+                                    font: { family: 'Inter' }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Impacto Financeiro (em R$ Bilhões, VPL)',
+                                    color: '#4a5568',
+                                    font: { family: 'Inter' }
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    display: false,
+                                    borderColor: '#e2e8f0',
+                                },
+                                ticks: {
+                                    color: '#4a5568',
+                                    font: { family: 'Inter' },
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('#main-nav a');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href').substring(1) === entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, { rootMargin: '-20% 0px -80% 0px' });
+            sections.forEach(section => observer.observe(section));
+        });
+    </script>
+</body>
+</html>
